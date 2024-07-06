@@ -92,6 +92,7 @@ impl Posts for ApiImpl {
         _cookies: CookieJar,
         header_params: PostsGetHeaderParams,
     ) -> Result<PostsGetResponse, String> {
+        println!("{:?}", _host);
         let jwt = header_params.authorization.replace("Bearer ", "");
         match jwt::validate_token(&SECRET.as_ref(), &jwt) {
             Ok(_) => {}
@@ -118,7 +119,9 @@ impl Posts for ApiImpl {
         header_params: PostsPostHeaderParams,
         body: std::option::Option<openapi::models::PostsPostRequest>,
     ) -> Result<PostsPostResponse, String> {
+        println!("{:?}", body);
         let jwt = header_params.authorization.replace("Bearer ", "");
+
         let Ok(jwt) = jwt::validate_token(&SECRET.as_ref(), &jwt) else {
             return Ok(PostsPostResponse::Status401);
         };
