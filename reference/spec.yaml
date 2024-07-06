@@ -1,0 +1,310 @@
+openapi: 3.0.3
+info:
+  title: 掲示板アプリケーションAPI
+  version: 1.0.0
+  description: ユーザー登録、認証、および投稿のCRUD操作を備えた掲示板アプリケーションのAPI
+  contact:
+    name: Your Name
+    url: 'https://your-website.com'
+  license:
+    name: MIT
+    url: 'https://opensource.org/licenses/MIT'
+servers:
+  - url: 'http://localhost:8080'
+    description: ローカルサーバー
+tags:
+  - name: users
+    description: ユーザーに関する操作
+  - name: auth
+    description: ユーザー認証
+  - name: posts
+    description: 投稿に関する操作
+paths:
+  /users:
+    post:
+      tags:
+        - users
+      summary: 新規ユーザー登録
+      description: 名前、メールアドレス、パスワードを使用して新規ユーザーを登録します。
+      requestBody:
+        $ref: '#/components/requestBodies/UserRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/UserResponse'
+        '400':
+          description: リクエストが不正です
+  /auth:
+    post:
+      tags:
+        - auth
+      summary: ユーザー認証
+      description: ユーザーを認証し、JWTトークンを返します。
+      requestBody:
+        $ref: '#/components/requestBodies/AuthRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthResponse'
+        '400':
+          description: リクエストが不正です
+  /posts:
+    post:
+      tags:
+        - posts
+      summary: 新規投稿作成
+      description: 認証されたユーザーによって新しい投稿を作成します。
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        $ref: '#/components/requestBodies/CreatePostRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/PostResponse'
+        '400':
+          description: リクエストが不正です
+        '401':
+          description: 認証されていません
+    get:
+      tags:
+        - posts
+      summary: すべての投稿を取得
+      description: すべての投稿を取得します。
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            format: JWT
+      responses:
+        '200':
+          $ref: '#/components/responses/PostsResponse'
+        '400':
+          description: リクエストが不正です
+        '401':
+          description: 認証されていません
+  /posts/{postId}:
+    get:
+      tags:
+        - posts
+      summary: IDで投稿を取得
+      description: IDで投稿を取得します。
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            format: JWT
+      responses:
+        '200':
+          $ref: '#/components/responses/PostResponse'
+        '400':
+          description: リクエストが不正です
+        '401':
+          description: 認証されていません
+        '404':
+          description: 投稿が見つかりません
+    put:
+      tags:
+        - posts
+      summary: 投稿を更新
+      description: 既存の投稿を更新します。
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            format: JWT
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        $ref: '#/components/requestBodies/UpdatePostRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/PostResponse'
+        '400':
+          description: リクエストが不正です
+        '401':
+          description: 認証されていません
+        '404':
+          description: 投稿が見つかりません
+    delete:
+      tags:
+        - posts
+      summary: 投稿を削除
+      description: IDで投稿を削除します。
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            format: JWT
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ユーザーの一意の識別子
+        name:
+          type: string
+          description: ユーザーの名前
+        email:
+          type: string
+          format: email
+          description: ユーザーのメールアドレス
+        password:
+          type: string
+          description: ユーザーのパスワード
+    Auth:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: ユーザーのメールアドレス
+        password:
+          type: string
+          description: ユーザーのパスワード
+    Token:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWTトークン
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 投稿の一意の識別子
+        title:
+          type: string
+          description: 投稿のタイトル
+        content:
+          type: string
+          description: 投稿の内容
+        userId:
+          type: integer
+          format: int64
+          description: 投稿を作成したユーザーのID
+  requestBodies:
+    UserRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: ユーザーの名前
+              email:
+                type: string
+                format: email
+                description: ユーザーのメールアドレス
+              password:
+                type: string
+                description: ユーザーのパスワード
+            required:
+              - name
+              - email
+              - password
+    AuthRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Auth'
+    CreatePostRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: 投稿のタイトル
+              content:
+                type: string
+                description: 投稿の内容
+            required:
+              - title
+              - content
+    UpdatePostRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Post'
+  responses:
+    UserResponse:
+      description: User created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+    AuthResponse:
+      description: Authentication successful, token returned
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Token'
+    PostResponse:
+      description: Post created/updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Post'
+    PostsResponse:
+      description: List of posts
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Post'
