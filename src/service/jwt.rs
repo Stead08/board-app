@@ -1,3 +1,4 @@
+/// Code from https://github.com/toms74209200/todo-axum/blob/master/todo/src/jwt/jwt.rs (MIT)
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -73,7 +74,7 @@ mod tests {
                 &DecodingKey::from_secret(secret.as_ref()),
                 &Validation::new(Algorithm::HS256),
             )
-                .unwrap();
+            .unwrap();
 
             assert_eq!(token.split('.').count(), 3);
             assert_eq!(decoded.claims.uid, uid);
