@@ -38,8 +38,8 @@ pub fn create_token(
 
 pub fn validate_token(secret: &[u8], token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     let decoded = decode::<Claims>(
-        &token,
-        &DecodingKey::from_secret(&secret.as_ref()),
+        token,
+        &DecodingKey::from_secret(secret),
         &Validation::new(Algorithm::HS256),
     )?;
     if (decoded.claims.exp >= Utc::now().timestamp() as usize)
@@ -66,11 +66,11 @@ mod tests {
         fn test_create_token() {
             let secret = Uuid::new_v4().to_string();
             let uid = Uuid::new_v4().to_string();
-            let token = create_token(&secret.as_ref(), &uid).unwrap();
+            let token = create_token(secret.as_ref(), &uid).unwrap();
 
             let decoded = decode::<Claims>(
                 &token,
-                &DecodingKey::from_secret(&secret.as_ref()),
+                &DecodingKey::from_secret(secret.as_ref()),
                 &Validation::new(Algorithm::HS256),
             )
                 .unwrap();
@@ -79,7 +79,7 @@ mod tests {
             assert_eq!(decoded.claims.uid, uid);
             assert!(decoded.claims.exp > Utc::now().timestamp() as usize);
             assert!(decoded.claims.iat <= Utc::now().timestamp() as usize);
-            assert!(decoded.claims.jti.len() > 0);
+            assert!(!decoded.claims.jti.is_empty());
         }
     }
 
@@ -96,7 +96,7 @@ mod tests {
             let claims = Claims::new(uid.to_string(), jti.clone());
             let token = encode(&header, &claims, &EncodingKey::from_secret(secret.as_ref()));
 
-            let claims = validate_token(&secret.as_ref(), &token.unwrap()).unwrap();
+            let claims = validate_token(secret.as_ref(), &token.unwrap()).unwrap();
 
             assert_eq!(&claims.uid, &uid);
             assert_eq!(&claims.jti, &jti);
@@ -114,7 +114,7 @@ mod tests {
 
             let mut invalid_secret = secret.clone();
             invalid_secret.push_str("invalid");
-            let result = validate_token(&invalid_secret.as_ref(), &token.unwrap());
+            let result = validate_token(invalid_secret.as_ref(), &token.unwrap());
 
             assert!(result.is_err());
         }
@@ -136,7 +136,7 @@ mod tests {
             };
             let token = encode(&header, &claims, &EncodingKey::from_secret(secret.as_ref()));
 
-            let result = validate_token(&secret.as_ref(), &token.unwrap());
+            let result = validate_token(secret.as_ref(), &token.unwrap());
 
             assert!(result.is_err());
         }

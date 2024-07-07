@@ -1,6 +1,6 @@
 use crate::value_object::{Content, Email, HashedPassword, Name, Password, PostId, Title, UserId};
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
 };
 use thiserror::Error;

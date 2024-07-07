@@ -25,13 +25,9 @@ use openapi::{
         users::{Users, UsersPostResponse},
     },
     models,
-    types::*,
 };
 use password_hash::{PasswordHash, PasswordVerifier};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use validator::Validate;
 
 const SECRET: &str = "secret";
@@ -44,7 +40,7 @@ struct ApiImpl {
 
 impl AsRef<ApiImpl> for ApiImpl {
     fn as_ref(&self) -> &ApiImpl {
-        &self
+        self
     }
 }
 
@@ -94,7 +90,7 @@ impl Posts for ApiImpl {
     ) -> Result<PostsGetResponse, String> {
         println!("{:?}", _host);
         let jwt = header_params.authorization.replace("Bearer ", "");
-        match jwt::validate_token(&SECRET.as_ref(), &jwt) {
+        match jwt::validate_token(SECRET.as_ref(), &jwt) {
             Ok(_) => {}
             Err(_) => return Ok(PostsGetResponse::Status401),
         };
@@ -122,7 +118,7 @@ impl Posts for ApiImpl {
         println!("{:?}", body);
         let jwt = header_params.authorization.replace("Bearer ", "");
 
-        let Ok(jwt) = jwt::validate_token(&SECRET.as_ref(), &jwt) else {
+        let Ok(jwt) = jwt::validate_token(SECRET.as_ref(), &jwt) else {
             return Ok(PostsPostResponse::Status401);
         };
         let body = body.ok_or("body is required")?;
@@ -152,7 +148,7 @@ impl Posts for ApiImpl {
         path_params: PostsPostIdDeletePathParams,
     ) -> Result<PostsPostIdDeleteResponse, String> {
         let jwt = header_params.authorization.replace("Bearer ", "");
-        let Ok(jwt) = jwt::validate_token(&SECRET.as_ref(), &jwt) else {
+        let Ok(jwt) = jwt::validate_token(SECRET.as_ref(), &jwt) else {
             return Ok(PostsPostIdDeleteResponse::Status401_Unauthorized);
         };
         let post_id = path_params.post_id;
@@ -172,28 +168,26 @@ impl Posts for ApiImpl {
 
     async fn posts_post_id_get(
         &self,
-        method: Method,
-        host: Host,
-        cookies: CookieJar,
+        _method: Method,
+        _host: Host,
+        _cookies: CookieJar,
         header_params: PostsPostIdGetHeaderParams,
         path_params: PostsPostIdGetPathParams,
     ) -> Result<PostsPostIdGetResponse, String> {
         let jwt = header_params.authorization.replace("Bearer ", "");
-        let Ok(jwt) = jwt::validate_token(&SECRET.as_ref(), &jwt) else {
+        let Ok(_jwt) = jwt::validate_token(SECRET.as_ref(), &jwt) else {
             return Ok(PostsPostIdGetResponse::Status401);
         };
         let post_id = path_params.post_id;
         let posts_locked = self.posts.lock().unwrap();
         let post = posts_locked.iter().find(|post| post.id == post_id);
         if let Some(post) = post {
-            Ok(PostsPostIdGetResponse::Status200_PostCreated(
-                models::Post {
-                    id: Some(post.id),
-                    title: Some(post.title.clone()),
-                    content: Some(post.content.clone()),
-                    user_id: Some(post.user_id),
-                },
-            ))
+            Ok(PostsPostIdGetResponse::Status200_PostCreated(Post {
+                id: Some(post.id),
+                title: Some(post.title.clone()),
+                content: Some(post.content.clone()),
+                user_id: Some(post.user_id),
+            }))
         } else {
             Ok(PostsPostIdGetResponse::Status404)
         }
@@ -201,15 +195,15 @@ impl Posts for ApiImpl {
 
     async fn posts_post_id_put(
         &self,
-        method: Method,
-        host: Host,
-        cookies: CookieJar,
+        _method: Method,
+        _host: Host,
+        _cookies: CookieJar,
         header_params: PostsPostIdPutHeaderParams,
         path_params: PostsPostIdPutPathParams,
         body: Option<Post>,
     ) -> Result<PostsPostIdPutResponse, String> {
         let jwt = header_params.authorization.replace("Bearer ", "");
-        let Ok(jwt) = jwt::validate_token(&SECRET.as_ref(), &jwt) else {
+        let Ok(jwt) = jwt::validate_token(SECRET.as_ref(), &jwt) else {
             return Ok(PostsPostIdPutResponse::Status401);
         };
         let post_id = path_params.post_id;
