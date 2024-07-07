@@ -15,3 +15,6 @@ chrono = "0.4.38"
 uuid = { version = "1.9.1", features = ["v4"] }
 tracing-subscriber = "0.3.18"
 tracing = "0.1.40"
+argon2 = { version = "0.5.3", features = ["password-hash", "rand"] }
+password-hash = { version = "0.5.0", features = ["getrandom"] }
+thiserror = "1.0.61"

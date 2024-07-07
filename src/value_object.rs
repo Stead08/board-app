@@ -7,3 +7,4 @@ pub type Email = String;
 pub type Password = String;
 pub type Title = String;
 pub type Content = String;
+pub type HashedPassword = String;

@@ -5,6 +5,7 @@ mod value_object;
 use crate::entity::User;
 use crate::service::jwt;
 use crate::value_object::PostId;
+use argon2::Argon2;
 use axum::{async_trait, extract::Host, http::Method};
 use axum_extra::extract::CookieJar;
 use openapi::apis::posts::PostsPostIdDeleteResponse;
@@ -26,13 +27,11 @@ use openapi::{
     models,
     types::*,
 };
+use password_hash::{PasswordHash, PasswordVerifier};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use tracing::log::log;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
 use validator::Validate;
 
 const SECRET: &str = "secret";
@@ -60,14 +59,14 @@ impl Users for ApiImpl {
     ) -> Result<UsersPostResponse, String> {
         let body = body.ok_or("body is required")?;
         body.validate().map_err(|e| e.to_string())?;
-        // todo! idの生成方法を考える
         // user idはusersの長さ+1
-        let user = User {
-            id: value_object::UserId::from(self.users.lock().unwrap().len() as i64 + 1),
-            name: value_object::Name::from(body.name.clone()),
-            email: value_object::Email::from(body.email.clone()),
-            password: value_object::Password::from(body.password),
-        };
+        let user = User::new(
+            self.users.lock().unwrap().len() as i64 + 1,
+            body.name.clone(),
+            body.email.clone(),
+            body.password.clone(),
+        )
+        .map_err(|e| e.to_string())?;
 
         let mut users = self.users.lock().unwrap();
         users.push(user.clone());
@@ -251,19 +250,31 @@ impl Auth for ApiImpl {
             Some(body) => (body.email, body.password),
             None => return Err("body is required".to_string()),
         };
+
+        let email = email.ok_or("Email is required")?;
+        let password = password.ok_or("Password is required")?;
+
         let users_locked = self.users.lock().unwrap();
-        // todo! ハッシュ化したパスワードを利用する
-        let user = users_locked.iter().find(|user| {
-            user.email == *email.as_ref().unwrap() && user.password == *password.as_ref().unwrap()
-        });
-        if let Some(user) = user {
-            let token = jwt::create_token(SECRET.as_ref(), &user.id.to_string())
-                .map_err(|e| e.to_string())?;
-            Ok(AuthPostResponse::Status200_AuthenticationSuccessful(
-                models::Token { token: Some(token) },
-            ))
-        } else {
-            Ok(AuthPostResponse::Status400)
+        let user = users_locked.iter().find(|user| user.email == email);
+
+        match user {
+            Some(user) => {
+                let password_hash =
+                    PasswordHash::new(&user.password).map_err(|_| "Invalid password hash")?;
+                let argon2 = Argon2::default();
+
+                match argon2.verify_password(password.as_bytes(), &password_hash) {
+                    Ok(_) => {
+                        let token = jwt::create_token(SECRET.as_ref(), &user.id.to_string())
+                            .map_err(|e| e.to_string())?;
+                        Ok(AuthPostResponse::Status200_AuthenticationSuccessful(
+                            models::Token { token: Some(token) },
+                        ))
+                    }
+                    Err(_) => Ok(AuthPostResponse::Status400),
+                }
+            }
+            None => Ok(AuthPostResponse::Status400),
         }
     }
 }
