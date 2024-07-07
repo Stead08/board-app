@@ -67,6 +67,7 @@ impl Users for ApiImpl {
             body.password.clone(),
         )
         .map_err(|e| e.to_string())?;
+        println!("{:?}", user);
 
         let mut users = self.users.lock().unwrap();
         users.push(user.clone());
